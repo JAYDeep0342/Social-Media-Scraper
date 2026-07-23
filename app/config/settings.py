@@ -19,6 +19,10 @@ from app.config.constants import (
     CIRCUIT_BREAKER_FAILURE_THRESHOLD,
     CIRCUIT_BREAKER_HALF_OPEN_MAX_CALLS,
     CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS,
+    CONFIDENCE_SCORE_HIGH,
+    CONFIDENCE_SCORE_LOW,
+    CONFIDENCE_SCORE_MEDIUM,
+    CONFIDENCE_SCORE_NONE,
     CONNECT_TIMEOUT_SECONDS,
     CONNECTION_POOL_SIZE_PER_HOST,
     DEFAULT_TIMEOUT,
@@ -121,6 +125,12 @@ class Settings(BaseSettings):
     MAX_SEARCH_WORKERS: int = Field(
         default=MAX_SEARCH_WORKERS, ge=1, description="Default parallel worker count for social discovery"
     )
+
+    # --- URL confidence & dedup engine ---
+    CONFIDENCE_SCORE_HIGH: int = Field(default=CONFIDENCE_SCORE_HIGH, ge=0)
+    CONFIDENCE_SCORE_MEDIUM: int = Field(default=CONFIDENCE_SCORE_MEDIUM, ge=0)
+    CONFIDENCE_SCORE_LOW: int = Field(default=CONFIDENCE_SCORE_LOW, ge=0)
+    CONFIDENCE_SCORE_NONE: int = Field(default=CONFIDENCE_SCORE_NONE, ge=0)
 
     # --- Benchmarking ---
     BENCHMARK_ENABLED: bool = True

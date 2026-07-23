@@ -73,6 +73,12 @@ SCROLL_MAX_TOTAL_ATTEMPTS = 60
 # --- Google Maps website enrichment ---
 ENRICHMENT_WORKER_COUNT = 4
 
+# --- URL confidence & dedup engine ---
+CONFIDENCE_SCORE_HIGH = 100
+CONFIDENCE_SCORE_MEDIUM = 70
+CONFIDENCE_SCORE_LOW = 40
+CONFIDENCE_SCORE_NONE = 0
+
 # --- Social discovery ---
 # DuckDuckGo's html-only endpoint requires no JS rendering, unlike
 # Google/Bing's search UIs — the only search provider actually implemented
