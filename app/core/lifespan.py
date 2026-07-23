@@ -1,0 +1,27 @@
+"""FastAPI startup/shutdown lifecycle."""
+
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from app.config.settings import get_settings
+from app.core.logging import get_logger, setup_logging
+
+logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    setup_logging()
+    settings = get_settings()
+    logger.info(
+        "Starting %s v%s [env=%s, debug=%s, max_concurrency=%s]",
+        settings.APP_NAME,
+        settings.APP_VERSION,
+        settings.ENV,
+        settings.DEBUG,
+        settings.MAX_CONCURRENCY,
+    )
+    yield
+    logger.info("Shutting down %s", settings.APP_NAME)
