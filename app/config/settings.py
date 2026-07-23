@@ -23,6 +23,7 @@ from app.config.constants import (
     CONNECTION_POOL_SIZE_PER_HOST,
     DEFAULT_TIMEOUT,
     DNS_CACHE_TTL_SECONDS,
+    ENRICHMENT_WORKER_COUNT,
     HTTP2_ENABLED,
     MAX_CONCURRENCY,
     MAX_HTTP_CONNECTIONS,
@@ -109,6 +110,9 @@ class Settings(BaseSettings):
     SCROLL_PAUSE_SECONDS: float = Field(default=SCROLL_PAUSE_SECONDS, gt=0)
     SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS: int = Field(default=SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS, ge=1)
     SCROLL_MAX_TOTAL_ATTEMPTS: int = Field(default=SCROLL_MAX_TOTAL_ATTEMPTS, ge=1)
+
+    # --- Google Maps website enrichment ---
+    ENRICHMENT_WORKER_COUNT: int = Field(default=ENRICHMENT_WORKER_COUNT, ge=1)
 
     # --- Benchmarking ---
     BENCHMARK_ENABLED: bool = True

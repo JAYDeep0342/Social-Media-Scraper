@@ -1,0 +1,2 @@
+name,execution_time_seconds,cpu_percent,ram_mb,success_count,failure_count,success_rate,started_at,finished_at
+website_enrichment_10,20.6532,0.0,0.64,10,0,100.0,2026-07-23T11:55:13.336100+00:00,2026-07-23T11:55:33.988979+00:00
