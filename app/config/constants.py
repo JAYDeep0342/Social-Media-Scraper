@@ -55,6 +55,19 @@ DNS_CACHE_TTL_SECONDS = 300.0
 # decoding). "br" is only advertised if a brotli decoder is installed. ---
 BASE_ACCEPTED_ENCODINGS = ("gzip", "deflate")
 
+# --- Google Maps discovery: browser ---
+GOOGLE_MAPS_BASE_URL = "https://www.google.com/maps"
+BROWSER_HEADLESS = True
+BROWSER_NAVIGATION_TIMEOUT_SECONDS = 30.0
+BROWSER_POOL_SIZE = 4
+VIEWPORT_WIDTH = 1366
+VIEWPORT_HEIGHT = 768
+
+# --- Google Maps discovery: scrolling ---
+SCROLL_PAUSE_SECONDS = 1.2
+SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS = 4
+SCROLL_MAX_TOTAL_ATTEMPTS = 60
+
 DEFAULT_USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",

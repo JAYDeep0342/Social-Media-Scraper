@@ -13,6 +13,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.config.constants import (
     API_V1_PREFIX,
     APP_TITLE,
+    BROWSER_HEADLESS,
+    BROWSER_NAVIGATION_TIMEOUT_SECONDS,
+    BROWSER_POOL_SIZE,
     CIRCUIT_BREAKER_FAILURE_THRESHOLD,
     CIRCUIT_BREAKER_HALF_OPEN_MAX_CALLS,
     CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS,
@@ -29,6 +32,11 @@ from app.config.constants import (
     RETRY_BACKOFF_BASE,
     RETRY_JITTER_SECONDS,
     RETRY_MAX_DELAY_SECONDS,
+    SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS,
+    SCROLL_MAX_TOTAL_ATTEMPTS,
+    SCROLL_PAUSE_SECONDS,
+    VIEWPORT_HEIGHT,
+    VIEWPORT_WIDTH,
 )
 
 
@@ -89,6 +97,18 @@ class Settings(BaseSettings):
 
     # --- DNS cache ---
     DNS_CACHE_TTL_SECONDS: float = Field(default=DNS_CACHE_TTL_SECONDS, ge=0)
+
+    # --- Google Maps discovery: browser ---
+    BROWSER_HEADLESS: bool = Field(default=BROWSER_HEADLESS)
+    BROWSER_NAVIGATION_TIMEOUT_SECONDS: float = Field(default=BROWSER_NAVIGATION_TIMEOUT_SECONDS, gt=0)
+    BROWSER_POOL_SIZE: int = Field(default=BROWSER_POOL_SIZE, ge=1)
+    VIEWPORT_WIDTH: int = Field(default=VIEWPORT_WIDTH, ge=1)
+    VIEWPORT_HEIGHT: int = Field(default=VIEWPORT_HEIGHT, ge=1)
+
+    # --- Google Maps discovery: scrolling ---
+    SCROLL_PAUSE_SECONDS: float = Field(default=SCROLL_PAUSE_SECONDS, gt=0)
+    SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS: int = Field(default=SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS, ge=1)
+    SCROLL_MAX_TOTAL_ATTEMPTS: int = Field(default=SCROLL_MAX_TOTAL_ATTEMPTS, ge=1)
 
     # --- Benchmarking ---
     BENCHMARK_ENABLED: bool = True
