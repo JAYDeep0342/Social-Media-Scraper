@@ -6,10 +6,24 @@ client (Phase 2+). It performs no network I/O.
 
 from dataclasses import dataclass, field
 
-from app.config.constants import DEFAULT_USER_AGENTS
+from app.config.constants import BASE_ACCEPTED_ENCODINGS, DEFAULT_USER_AGENTS
 from app.config.settings import get_settings
 
 _settings = get_settings()
+
+
+def _accepted_encodings() -> tuple[str, ...]:
+    """gzip/deflate are decoded by httpx with no extra dependencies; brotli
+    ("br") is only advertised if a brotli decoder is actually installed, so
+    we never advertise support we can't decode."""
+    try:
+        import brotli  # noqa: F401
+    except ImportError:
+        try:
+            import brotlicffi  # noqa: F401
+        except ImportError:
+            return BASE_ACCEPTED_ENCODINGS
+    return (*BASE_ACCEPTED_ENCODINGS, "br")
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +40,7 @@ class HTTPClientConfig:
         default_factory=lambda: {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": ", ".join(_accepted_encodings()),
             "Connection": "keep-alive",
         }
     )

@@ -6,6 +6,13 @@ from app.exceptions.errors import (
     ScraperTimeoutError,
     ValidationError,
 )
+from app.exceptions.network import (
+    CircuitOpen,
+    DNSFailure,
+    NetworkConnectionError,
+    NetworkTimeout,
+    RetryExceeded,
+)
 
 __all__ = [
     "AppException",
@@ -14,4 +21,9 @@ __all__ = [
     "ExtractionError",
     "ScraperTimeoutError",
     "ValidationError",
+    "NetworkConnectionError",
+    "RetryExceeded",
+    "CircuitOpen",
+    "NetworkTimeout",
+    "DNSFailure",
 ]

@@ -29,6 +29,32 @@ MAX_RETRIES = 3
 # --- Cache ---
 CACHE_TTL = 300  # seconds
 
+# --- Networking: HTTP client ---
+CONNECT_TIMEOUT_SECONDS = 5.0
+CONNECTION_POOL_SIZE_PER_HOST = 20
+HTTP2_ENABLED = True
+
+# --- Networking: retry engine ---
+RETRY_BACKOFF_BASE = 0.5
+RETRY_MAX_DELAY_SECONDS = 8.0
+RETRY_JITTER_SECONDS = 0.5
+
+# --- Networking: circuit breaker ---
+CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
+CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS = 30.0
+CIRCUIT_BREAKER_HALF_OPEN_MAX_CALLS = 1
+
+# --- Networking: rate limiter (token bucket) ---
+RATE_LIMIT_REQUESTS_PER_SECOND = 10.0
+RATE_LIMIT_BURST = 20
+
+# --- Networking: DNS cache ---
+DNS_CACHE_TTL_SECONDS = 300.0
+
+# --- Networking: compression (configuration only; httpx handles the actual
+# decoding). "br" is only advertised if a brotli decoder is installed. ---
+BASE_ACCEPTED_ENCODINGS = ("gzip", "deflate")
+
 DEFAULT_USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",

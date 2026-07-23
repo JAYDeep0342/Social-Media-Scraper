@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from app.config.settings import get_settings
 from app.core.logging import get_logger, setup_logging
+from app.network.session_manager import SessionManager
 
 logger = get_logger(__name__)
 
@@ -23,5 +24,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.DEBUG,
         settings.MAX_CONCURRENCY,
     )
+
+    session_manager = SessionManager.get_instance()
+    await session_manager.startup()
+
     yield
+
+    await session_manager.shutdown()
     logger.info("Shutting down %s", settings.APP_NAME)
