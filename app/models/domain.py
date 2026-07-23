@@ -15,12 +15,19 @@ class SocialLead:
     instagram_url: Optional[str] = None
     facebook_url: Optional[str] = None
     google_maps_url: Optional[str] = None
+    # Confidence tier ("high" | "medium" | "low") for whichever URL was
+    # discovered by app.enrichment.social (Phase 5) — None until then, and
+    # left untouched for a URL that arrived some other way.
+    instagram_confidence: Optional[str] = None
+    facebook_confidence: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "instagram_url": self.instagram_url,
             "facebook_url": self.facebook_url,
             "google_maps_url": self.google_maps_url,
+            "instagram_confidence": self.instagram_confidence,
+            "facebook_confidence": self.facebook_confidence,
         }
 
 
@@ -40,6 +47,8 @@ class BusinessLead:
             "instagram_url": self.social.instagram_url,
             "facebook_url": self.social.facebook_url,
             "google_maps_url": self.social.google_maps_url,
+            "instagram_confidence": self.social.instagram_confidence,
+            "facebook_confidence": self.social.facebook_confidence,
             "source_keyword": self.source_keyword,
             "source_location": self.source_location,
             "discovered_at": self.discovered_at.isoformat(),

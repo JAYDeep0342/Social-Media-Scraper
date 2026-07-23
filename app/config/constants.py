@@ -13,6 +13,8 @@ DEFAULT_LEAD_LIMIT = 20
 MAX_LEADS = 500
 
 # --- Concurrency / worker ceilings ---
+
+
 MAX_CONCURRENCY = 20
 MAX_HTTP_CONNECTIONS = 100
 MAX_SEARCH_WORKERS = 10
@@ -70,6 +72,13 @@ SCROLL_MAX_TOTAL_ATTEMPTS = 60
 
 # --- Google Maps website enrichment ---
 ENRICHMENT_WORKER_COUNT = 4
+
+# --- Social discovery ---
+# DuckDuckGo's html-only endpoint requires no JS rendering, unlike
+# Google/Bing's search UIs — the only search provider actually implemented
+# in Phase 5 ("prefer HTTP requests... avoid Playwright unless necessary").
+DUCKDUCKGO_HTML_ENDPOINT = "https://html.duckduckgo.com/html/"
+SOCIAL_SEARCH_RESULT_LIMIT = 10
 
 DEFAULT_USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",

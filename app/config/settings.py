@@ -28,6 +28,7 @@ from app.config.constants import (
     MAX_CONCURRENCY,
     MAX_HTTP_CONNECTIONS,
     MAX_RETRIES,
+    MAX_SEARCH_WORKERS,
     RATE_LIMIT_BURST,
     RATE_LIMIT_REQUESTS_PER_SECOND,
     RETRY_BACKOFF_BASE,
@@ -36,6 +37,7 @@ from app.config.constants import (
     SCROLL_MAX_ATTEMPTS_WITHOUT_PROGRESS,
     SCROLL_MAX_TOTAL_ATTEMPTS,
     SCROLL_PAUSE_SECONDS,
+    SOCIAL_SEARCH_RESULT_LIMIT,
     VIEWPORT_HEIGHT,
     VIEWPORT_WIDTH,
 )
@@ -113,6 +115,12 @@ class Settings(BaseSettings):
 
     # --- Google Maps website enrichment ---
     ENRICHMENT_WORKER_COUNT: int = Field(default=ENRICHMENT_WORKER_COUNT, ge=1)
+
+    # --- Social discovery ---
+    SOCIAL_SEARCH_RESULT_LIMIT: int = Field(default=SOCIAL_SEARCH_RESULT_LIMIT, ge=1)
+    MAX_SEARCH_WORKERS: int = Field(
+        default=MAX_SEARCH_WORKERS, ge=1, description="Default parallel worker count for social discovery"
+    )
 
     # --- Benchmarking ---
     BENCHMARK_ENABLED: bool = True
