@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import pytest
 
 from app.enrichment.social.batch import discover_social_links_one
@@ -118,6 +121,41 @@ async def test_html_fetch_failure_falls_through_to_search() -> None:
     result = await discover_social_links_one(lead, fetcher=fetcher, extractor=extractor, fallback=fallback)
 
     assert result.social.instagram_url == "https://www.instagram.com/testbiz/"
+
+
+@pytest.mark.asyncio
+async def test_instagram_and_facebook_fallback_lookups_run_concurrently() -> None:
+    """When both platforms need the search-engine fallback, the two
+    find() calls must overlap in wall-clock time instead of running one
+    after the other -- proven here by giving each call an artificial
+    delay and asserting the total elapsed time is close to ONE delay,
+    not the sum of both."""
+
+    class _SlowFallback:
+        def __init__(self, delay: float):
+            self.delay = delay
+            self.calls = []
+
+        async def find(self, business_name, platform):
+            self.calls.append(platform)
+            await asyncio.sleep(self.delay)
+            return (f"https://{platform}.example/testbiz", True)
+
+    lead = _lead(website=None)
+    fetcher = _FakeFetcher(None)
+    extractor = _FakeExtractor([])
+    delay = 0.15
+    fallback = _SlowFallback(delay)
+
+    start = time.perf_counter()
+    result = await discover_social_links_one(lead, fetcher=fetcher, extractor=extractor, fallback=fallback)
+    elapsed = time.perf_counter() - start
+
+    assert result.social.instagram_url == "https://instagram.example/testbiz"
+    assert result.social.facebook_url == "https://facebook.example/testbiz"
+    assert set(fallback.calls) == {"instagram", "facebook"}
+    # Concurrent: ~1x delay. Sequential would be ~2x delay (0.30s here).
+    assert elapsed < delay * 1.8
 
 
 @pytest.mark.asyncio

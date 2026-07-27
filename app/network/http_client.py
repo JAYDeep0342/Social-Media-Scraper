@@ -6,6 +6,7 @@ No retry, rate limiting, or circuit breaking here — those are separate,
 composable modules that `SessionManager` wires around this client.
 """
 
+import ssl
 from typing import Any, Mapping, MutableMapping, Optional, Sequence
 
 import httpx
@@ -17,6 +18,15 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 EventHooks = MutableMapping[str, Sequence[Any]]
+
+# httpx defaults to verifying against certifi's static CA bundle, which
+# lacks intermediates some sites (e.g. DuckDuckGo's html endpoint) omit
+# from their handshake -- verification then fails with "unable to get
+# local issuer certificate" even though the site's cert is valid. The
+# platform default context (OS trust store, with Windows' automatic
+# intermediate-cert fetching) verifies the same chains browsers do, so use
+# it instead of the certifi-only default.
+_SSL_CONTEXT = ssl.create_default_context()
 
 
 class HTTPClientManager:
@@ -71,6 +81,8 @@ class HTTPClientManager:
         )
         if transport is not None:
             kwargs["transport"] = transport
+        else:
+            kwargs["verify"] = _SSL_CONTEXT
 
         try:
             return httpx.AsyncClient(http2=http2, **kwargs)

@@ -157,6 +157,19 @@ class FakePage:
             return FakeCountLocator(lambda: 1 if self._end_marker_reached() else 0)
         raise ValueError(f"Unhandled selector in fake: {selector}")
 
+    async def evaluate(self, script: str, arg=None) -> list:
+        """Simulates CardExtractor's single batched page.evaluate() call:
+        one dict per currently-revealed card (mirroring what the real
+        in-page JS would produce), or None for a card missing a link/name
+        — same skip semantics as the real script."""
+        results = []
+        for card in self.cards[: self.revealed]:
+            if card.no_link or not card.name:
+                results.append(None)
+                continue
+            results.append({"mapsUrl": card.maps_url, "rawName": card.name, "website": card.website})
+        return results
+
     def _end_marker_reached(self) -> bool:
         return (
             self.simulate_end_marker_after is not None

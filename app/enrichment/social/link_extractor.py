@@ -12,8 +12,12 @@ from typing import List, Optional, Set
 
 from bs4 import BeautifulSoup
 
-_INSTAGRAM_RE = re.compile(r"(^|//)(www\.)?instagram\.com(/|$|\?|#)", re.IGNORECASE)
-_FACEBOOK_RE = re.compile(r"(^|//)(www\.|m\.|mobile\.)?facebook\.com(/|$|\?|#)", re.IGNORECASE)
+# Requires a non-empty path segment after the domain (a handle/profile),
+# so a bare "instagram.com" / "facebook.com" link -- a generic, unwired
+# "follow us" template icon, not a real profile -- is never treated as a
+# discovered candidate.
+_INSTAGRAM_RE = re.compile(r"(^|//)(www\.)?instagram\.com/[^/?#\s]+", re.IGNORECASE)
+_FACEBOOK_RE = re.compile(r"(^|//)(www\.|m\.|mobile\.)?facebook\.com/[^/?#\s]+", re.IGNORECASE)
 
 
 @dataclass

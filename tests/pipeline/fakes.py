@@ -124,6 +124,13 @@ class FakeOrchestratorPage:
             return FakeElementLocator(href=website) if website else FakeElementLocator(count_override=0)
         raise ValueError(f"Unhandled selector in fake: {selector}")
 
+    async def evaluate(self, script: str, arg=None) -> list:
+        """Simulates CardExtractor's single batched page.evaluate() call
+        for discovery: one dict per card, website always None (matching
+        this fake's existing discovery-never-exposes-a-website behavior;
+        enrichment fills it in separately via WEBSITE_LINK above)."""
+        return [{"mapsUrl": card.maps_url, "rawName": card.name, "website": None} for card in self.cards]
+
 
 class FakeOrchestratorPool:
     """Minimal fake of BrowserContextPool: hands out one of `pages` at a

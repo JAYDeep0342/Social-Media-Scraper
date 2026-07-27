@@ -2,7 +2,9 @@ import httpx
 import pytest
 import pytest_asyncio
 
+from app.config.settings import get_settings
 from app.exceptions.network import NetworkConnectionError, NetworkTimeout
+from app.network.circuit_breaker import CircuitState
 from app.network.retry_strategy import RetryPolicy
 from app.network.session_manager import SessionManager
 
@@ -82,3 +84,53 @@ async def test_failed_requests_are_recorded_in_metrics() -> None:
 
     snapshot = await session.metrics.snapshot()
     assert snapshot.failed_requests == 1
+
+
+@pytest.mark.asyncio
+async def test_rate_limiter_is_created_per_host_and_reused() -> None:
+    session = SessionManager.get_instance(transport=_mock_transport())
+
+    a1 = session.rate_limiter_for("hosta.test")
+    a2 = session.rate_limiter_for("hosta.test")
+    b = session.rate_limiter_for("hostb.test")
+
+    assert a1 is a2  # same host -> same instance, reused
+    assert a1 is not b  # different host -> independent instance
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_is_created_per_host_and_reused() -> None:
+    session = SessionManager.get_instance(transport=_mock_transport())
+
+    a1 = session.circuit_breaker_for("hosta.test")
+    a2 = session.circuit_breaker_for("hosta.test")
+    b = session.circuit_breaker_for("hostb.test")
+
+    assert a1 is a2
+    assert a1 is not b
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_opening_for_one_host_does_not_affect_another() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "failing-host.test" in str(request.url):
+            raise httpx.ConnectError("boom", request=request)
+        return httpx.Response(200, json={"ok": True})
+
+    session = SessionManager.get_instance(transport=httpx.MockTransport(handler), retry_policy=_FAST_RETRY_POLICY)
+    await session.startup()
+    settings = get_settings()
+
+    # Exhaust the failing host's failure threshold (each call contributes up
+    # to _FAST_RETRY_POLICY.max_attempts=2 failures) to trip its breaker open.
+    attempts_needed = settings.CIRCUIT_BREAKER_FAILURE_THRESHOLD
+    for _ in range(attempts_needed):
+        with pytest.raises(Exception):
+            await session.request("GET", "https://failing-host.test/ping")
+
+    assert session.circuit_breaker_for("failing-host.test").state == CircuitState.OPEN
+
+    # An unrelated host must be completely unaffected by the failing one.
+    response = await session.request("GET", "https://healthy-host.test/ping")
+    assert response.status_code == 200
+    assert session.circuit_breaker_for("healthy-host.test").state == CircuitState.CLOSED

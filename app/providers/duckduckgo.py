@@ -20,11 +20,21 @@ from urllib.parse import parse_qs, urlparse
 from bs4 import BeautifulSoup
 
 from app.config.constants import DUCKDUCKGO_HTML_ENDPOINT
+from app.config.settings import get_settings
 from app.core.logging import get_logger
+from app.network.retry_strategy import RetryPolicy
 from app.network.session_manager import SessionManager
 from app.providers.base import SearchProvider
 
 logger = get_logger(__name__)
+
+# A single attempt, no retries: verified live (this session, dozens of
+# queries) that when DuckDuckGo's html endpoint doesn't return usable
+# results for us, it's a persistent block (an anti-bot challenge page, or
+# a hung connection), never a one-off blip -- retrying just pays
+# SOCIAL_SEARCH_TIMEOUT_SECONDS again for the same outcome instead of
+# moving on to the next business.
+_NO_RETRY_POLICY = RetryPolicy(max_attempts=1)
 
 
 class DuckDuckGoSearchProvider(SearchProvider):
@@ -42,9 +52,14 @@ class DuckDuckGoSearchProvider(SearchProvider):
         this provider. Returns up to `limit` unwrapped result URLs, in
         DuckDuckGo's own ranked order.
         """
+        settings = get_settings()
         try:
             response = await self._get_session_manager().request(
-                "GET", DUCKDUCKGO_HTML_ENDPOINT, params={"q": keyword}
+                "GET",
+                DUCKDUCKGO_HTML_ENDPOINT,
+                params={"q": keyword},
+                timeout=settings.SOCIAL_SEARCH_TIMEOUT_SECONDS,
+                retry_policy=_NO_RETRY_POLICY,
             )
         except Exception:
             logger.warning("DuckDuckGo search failed for query: %s", keyword, exc_info=True)

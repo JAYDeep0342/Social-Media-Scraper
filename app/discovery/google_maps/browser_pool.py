@@ -1,6 +1,8 @@
 """Pool of reusable Playwright BrowserContext + Page pairs, so discovery
-tasks borrow an already-warm page instead of paying context/page creation
-cost on every search. Configurable pool size.
+and enrichment tasks borrow an already-warm page instead of paying
+context/page creation cost on every search/navigation. Configurable pool
+size; entries are created concurrently at startup so a larger pool
+doesn't cost proportionally more wall-clock time to warm up.
 """
 
 import asyncio
@@ -10,7 +12,10 @@ from typing import AsyncIterator, List, Optional
 from playwright.async_api import BrowserContext, Page
 
 from app.config.settings import get_settings
+from app.core.logging import get_logger
 from app.discovery.google_maps.browser_manager import BrowserManager
+
+logger = get_logger(__name__)
 
 
 class _PooledPage:
@@ -34,10 +39,27 @@ class BrowserContextPool:
         if self._started:
             return
         browser = self._browser_manager.browser
-        for _ in range(self._pool_size):
-            entry = await self._create_entry(browser)
-            self._all.append(entry)
-            await self._pool.put(entry)
+        results = await asyncio.gather(
+            *(self._create_entry(browser) for _ in range(self._pool_size)),
+            return_exceptions=True,
+        )
+
+        first_error: Optional[BaseException] = None
+        for result in results:
+            if isinstance(result, BaseException):
+                if first_error is None:
+                    first_error = result
+                continue
+            self._all.append(result)
+            await self._pool.put(result)
+
+        if first_error is not None:
+            # Whatever entries DID succeed are already tracked in
+            # self._all/self._pool above, so the caller's stop() (always
+            # called from the orchestrator's finally block) will still
+            # close them -- nothing created here is leaked even though
+            # start() itself is failing.
+            raise first_error
         self._started = True
 
     async def _create_entry(self, browser) -> _PooledPage:
@@ -45,7 +67,11 @@ class BrowserContextPool:
         context = await browser.new_context(
             viewport={"width": settings.VIEWPORT_WIDTH, "height": settings.VIEWPORT_HEIGHT}
         )
-        page = await context.new_page()
+        try:
+            page = await context.new_page()
+        except Exception:
+            await context.close()
+            raise
         return _PooledPage(context=context, page=page)
 
     @asynccontextmanager
@@ -58,7 +84,10 @@ class BrowserContextPool:
 
     async def stop(self) -> None:
         for entry in self._all:
-            await entry.context.close()
+            try:
+                await entry.context.close()
+            except Exception:
+                logger.exception("Error closing a pooled browser context; continuing to close the rest")
         self._all.clear()
         self._pool = asyncio.Queue()
         self._started = False

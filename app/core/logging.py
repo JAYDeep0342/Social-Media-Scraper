@@ -48,6 +48,12 @@ def setup_logging() -> None:
     # Uvicorn's access logger is noisy at INFO in production; keep app logs readable.
     logging.getLogger("uvicorn.access").setLevel(logging.INFO if settings.DEBUG else logging.WARNING)
 
+    # httpcore/hpack/httpx log every HTTP/2 frame and header byte at DEBUG
+    # (raw hpack decode dumps, per-frame ACKs) -- true wire-level noise,
+    # not application signal, so it drowns out real app logs even in dev.
+    for noisy_logger in ("httpcore", "hpack", "httpx"):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
     _configured = True
 
 

@@ -40,6 +40,7 @@ from app.discovery.google_maps.pipeline import run_discovery
 from app.enrichment.google_maps.batch import enrich_one
 from app.enrichment.google_maps.workers import enrich_batch
 from app.enrichment.social.batch import discover_social_links_one
+from app.enrichment.social.browser_html_fetcher import BrowserWebsiteHTMLFetcher
 from app.enrichment.social.confidence import Confidence
 from app.enrichment.social.workers import discover_social_batch
 from app.models.domain import BusinessLead
@@ -450,6 +451,16 @@ class PipelineOrchestrator:
         if owns_browser_resources:
             browser_manager = browser_manager or BrowserManager()
             browser_pool = BrowserContextPool(browser_manager, pool_size=self._concurrency.discovery_pool_size)
+
+        if social_fetcher is None:
+            # Plain HTTP GETs a business's homepage, but several real sites
+            # verified live return a near-empty stub to a non-browser
+            # client (their real content is only served/rendered for a
+            # browser-like request) -- so the default path renders through
+            # the same pooled browser Maps discovery/enrichment already
+            # use, instead of missing footer social links that are
+            # genuinely there.
+            social_fetcher = BrowserWebsiteHTMLFetcher(browser_pool)
 
         progress = PipelineProgressTracker()
         metrics = PipelineMetrics()

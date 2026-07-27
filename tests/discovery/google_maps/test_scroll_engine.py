@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from app.discovery.google_maps.scroll_engine import ScrollEngine
@@ -66,3 +68,22 @@ async def test_detects_end_of_list_via_text_marker() -> None:
 
     assert result.reached_end_of_list is True
     assert result.scroll_count == 0
+
+
+@pytest.mark.asyncio
+async def test_wait_resolves_early_once_new_cards_appear_instead_of_sleeping_full_pause() -> None:
+    """The adaptive poll must not sleep out a large pause window once the
+    scroll it triggered has already loaded new cards -- only a genuinely
+    stalled scroll should ever wait the full window."""
+    page = FakePage(cards=_cards(30), reveal_schedule=[6, 12])
+    engine = ScrollEngine(page, base_pause_seconds=2.0, poll_interval_seconds=0.02)
+
+    start = time.perf_counter()
+    result = await engine.scroll_until(limit=12)
+    elapsed = time.perf_counter() - start
+
+    assert result.reached_limit is True
+    assert result.scroll_count == 1
+    # A flat sleep(pause) would take >= 2.0s for this one scroll; the
+    # adaptive poll should notice the new cards within a few 0.02s ticks.
+    assert elapsed < 0.5

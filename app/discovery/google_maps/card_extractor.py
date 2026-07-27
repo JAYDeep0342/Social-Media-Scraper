@@ -8,13 +8,21 @@ for most cards — website enrichment (opening each place's detail panel) is
 a separate, heavier operation left to a future phase. When a website link
 genuinely isn't present on the card, `website` is correctly left as None.
 
-A single bad card (unexpected/missing markup) is logged and skipped rather
-than aborting the whole batch.
+All cards are read in a single `page.evaluate()` round trip rather than
+N sequential Playwright locator calls per card — the DOM read itself still
+costs O(cards), but that cost runs inside the page's own JS engine instead
+of paying the Playwright IPC round-trip latency once per field per card.
+The extracted field semantics are unchanged: same selectors, same
+aria-label-then-class-name fallback for the name, same "website only if
+the card itself exposes a link" rule.
+
+A single bad card (unexpected/missing markup, or a normalization failure)
+is logged and skipped rather than aborting the whole batch.
 """
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from playwright.async_api import Locator, Page
+from playwright.async_api import Page
 
 from app.core.logging import get_logger
 from app.discovery.google_maps import selectors
@@ -24,43 +32,69 @@ from app.normalizers.url_normalizer import normalize_business_url
 
 logger = get_logger(__name__)
 
+# Runs once per extract_all() call, reading every currently-rendered card's
+# fields in-page. Mirrors the previous per-card Playwright-locator logic
+# exactly: link href for the Maps URL, aria-label falling back to the
+# card's name element for the business name, and a best-effort website
+# link that's simply absent (null) when the card doesn't expose one.
+_EXTRACT_CARDS_JS = """
+([containerSel, linkSel, nameSel, websiteSel]) => {
+    const containers = Array.from(document.querySelectorAll(containerSel));
+    return containers.map(container => {
+        const link = container.querySelector(linkSel);
+        if (!link) return null;
+        const mapsUrl = link.getAttribute('href');
+        if (!mapsUrl) return null;
+
+        let rawName = link.getAttribute('aria-label');
+        if (!rawName) {
+            const nameEl = container.querySelector(nameSel);
+            rawName = nameEl ? nameEl.textContent : null;
+        }
+        if (!rawName) return null;
+
+        const websiteEl = container.querySelector(websiteSel);
+        const website = websiteEl ? websiteEl.getAttribute('href') : null;
+
+        return { mapsUrl, rawName, website };
+    });
+}
+"""
+
 
 class CardExtractor:
     def __init__(self, page: Page) -> None:
         self._page = page
 
     async def extract_all(self, *, source_keyword: str, source_location: str) -> List[BusinessLead]:
-        containers = self._page.locator(selectors.RESULT_CARD_CONTAINER)
-        count = await containers.count()
+        raw_cards = await self._page.evaluate(
+            _EXTRACT_CARDS_JS,
+            [
+                selectors.RESULT_CARD_CONTAINER,
+                selectors.RESULT_CARD_LINK_RELATIVE,
+                selectors.RESULT_CARD_NAME,
+                selectors.RESULT_CARD_WEBSITE_LINK,
+            ],
+        )
 
         leads: List[BusinessLead] = []
-        for i in range(count):
-            lead = await self._extract_one(
-                containers.nth(i), source_keyword=source_keyword, source_location=source_location
-            )
+        for raw in raw_cards:
+            if raw is None:
+                continue
+            lead = self._build_lead(raw, source_keyword=source_keyword, source_location=source_location)
             if lead is not None:
                 leads.append(lead)
         return leads
 
-    async def _extract_one(
-        self, container: Locator, *, source_keyword: str, source_location: str
+    def _build_lead(
+        self, raw: Dict[str, Any], *, source_keyword: str, source_location: str
     ) -> Optional[BusinessLead]:
         try:
-            link = container.locator(selectors.RESULT_CARD_LINK_RELATIVE)
-            if await link.count() == 0:
+            maps_url = raw.get("mapsUrl")
+            raw_name = raw.get("rawName")
+            if not maps_url or not raw_name:
                 return None
-            maps_url = await link.first.get_attribute("href")
-            if not maps_url:
-                return None
-
-            raw_name = await link.first.get_attribute("aria-label")
-            if not raw_name:
-                name_locator = container.locator(selectors.RESULT_CARD_NAME)
-                raw_name = await name_locator.first.text_content() if await name_locator.count() > 0 else None
-            if not raw_name:
-                return None
-
-            website = await self._extract_website(container)
+            website = raw.get("website")
 
             return BusinessLead(
                 business_name=normalize_business_name(raw_name),
@@ -72,11 +106,3 @@ class CardExtractor:
         except Exception:
             logger.warning("Skipping a result card that failed to extract cleanly", exc_info=True)
             return None
-
-    async def _extract_website(self, container: Locator) -> Optional[str]:
-        """Best-effort: only returns a value when the list card itself
-        exposes a website link. Never opens the detail panel."""
-        website_link = container.locator(selectors.RESULT_CARD_WEBSITE_LINK)
-        if await website_link.count() == 0:
-            return None
-        return await website_link.first.get_attribute("href")
